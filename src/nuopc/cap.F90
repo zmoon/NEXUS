@@ -284,9 +284,12 @@ contains
     character(len=255)    :: msg
     integer               :: localrc
     integer               :: timeSlice
+    logical               :: am_I_Root
 
     timeSlice = 0
     rc = ESMF_SUCCESS
+
+    am_I_Root = (localPet == rootPet)
 
     ! Query for clock, importState and exportState
     call ESMF_GridCompGet(model, clock=clock, importState=importState, &
@@ -448,7 +451,7 @@ contains
     !=================================================================
     ! Write NEXUS Diagnostic state
     !=================================================================
-    if (do_Debug) then
+    if (do_Debug .and. am_I_Root) then
       call nxs_state_write( NXS_Diag_State, DiagFile, timeSlice=timeSlice, rc=localrc )
       if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__,  &
@@ -469,11 +472,13 @@ contains
       !=================================================================
       ! Write NEXUS Export state
       !=================================================================
-      call nxs_state_write( NXS_Expt_State, ExptFile, timeSlice=timeSlice, rc=localrc )
-      if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__,  &
-        file=__FILE__,  &
-        rcToReturn=rc)) return  ! bail out
+      if (am_I_Root) then
+        call nxs_state_write( NXS_Expt_State, ExptFile, timeSlice=timeSlice, rc=localrc )
+        if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__,  &
+          file=__FILE__,  &
+          rcToReturn=rc)) return  ! bail out
+      end if
     end if
 
   end subroutine
